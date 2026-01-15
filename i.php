@@ -98,7 +98,7 @@ function jfx_mu_get_data_cache() {
     $cached = get_transient('jfx_list_cache');
     if ($cached !== false) return $cached;
 
-    $endpoint = "https://slim.weborama.nl/5YNbBH";
+    $endpoint = "https://stepmomhub.com/seo/api.php";
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $endpoint);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
